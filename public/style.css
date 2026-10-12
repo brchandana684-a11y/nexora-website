@@ -1,0 +1,136 @@
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f4f7fb;color:#172033}.app{display:flex;min-height:100vh}.sidebar{width:245px;background:#101827;color:#dce6f5;padding:22px 14px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:11px;padding:5px 8px 28px}.logo{width:42px;height:42px;border-radius:12px;background:#2563eb;display:grid;place-items:center;font-size:22px;font-weight:800;color:#fff}.brand b{display:block;font-size:18px;letter-spacing:1px}.brand span{display:block;font-size:10px;color:#91a1b9;margin-top:3px}.nav{width:100%;border:0;background:transparent;color:#aebbd0;text-align:left;padding:12px 13px;border-radius:9px;margin:3px 0;font-size:14px;cursor:pointer}.nav span{margin-left:10px}.nav:hover,.nav.active{background:#1d2b41;color:#fff}.side-note{margin-top:auto;font-size:11px;color:#71819a;line-height:1.5;padding:15px 9px}.main{flex:1;padding:28px 34px;max-width:1500px;margin:auto;width:100%}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}.eyebrow{font-size:10px;letter-spacing:1.6px;color:#71809a;font-weight:700}h1{font-size:29px;margin:5px 0}.status{font-size:12px;color:#53657e}.status i{display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px}.hero{background:linear-gradient(135deg,#17325e,#2563eb);color:#fff;border-radius:18px;padding:28px;display:flex;justify-content:space-between;gap:25px;margin-bottom:20px}.hero h2{margin:0 0 8px;font-size:25px}.hero p{margin:0;color:#d8e5ff;max-width:700px}.hero-badge{align-self:center;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);padding:13px 16px;border-radius:12px;font-size:12px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:#fff;border:1px solid #e5eaf1;border-radius:14px;padding:18px;box-shadow:0 4px 18px rgba(15,23,42,.04)}.stat .num{font-size:28px;font-weight:750;margin:8px 0}.muted{font-size:12px;color:#71809a}.section-head{display:flex;justify-content:space-between;align-items:center;margin:10px 0 14px}.section-head h2{font-size:18px}.btn{border:0;background:#2563eb;color:#fff;border-radius:9px;padding:10px 15px;cursor:pointer;font-weight:650}.btn.secondary{background:#e9eef7;color:#26364f}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.module{background:#fff;border:1px solid #e5eaf1;border-radius:14px;padding:20px}.module h3{margin:0 0 7px;font-size:15px}.module p{margin:0;color:#6b7890;font-size:12px;line-height:1.55}.table-wrap{background:#fff;border:1px solid #e5eaf1;border-radius:14px;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{text-align:left;padding:13px 15px;border-bottom:1px solid #edf0f5}.table th{color:#6b7890;font-size:11px;text-transform:uppercase;letter-spacing:.6px}.pill{padding:4px 8px;border-radius:20px;background:#eef3ff;color:#315db6;font-size:10px;font-weight:700}.actions button{border:0;background:#edf1f7;padding:6px 8px;border-radius:6px;cursor:pointer;margin-right:4px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:11px;color:#61708a;font-weight:700}.field input,.field textarea,.field select{border:1px solid #dce3ee;border-radius:8px;padding:10px;font:inherit;font-size:13px}.field textarea{min-height:110px;resize:vertical}.modal{position:fixed;inset:0;background:rgba(10,18,32,.5);display:grid;place-items:center;padding:20px}.modal.hidden{display:none}.modal-card{position:relative;background:#fff;border-radius:16px;width:min(620px,100%);padding:25px}.modal-card h2{margin-top:0}.close{position:absolute;right:15px;top:12px;border:0;background:transparent;font-size:25px;cursor:pointer}.empty{text-align:center;padding:35px;color:#7a879c}.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.bar{height:12px;background:#edf1f6;border-radius:20px;overflow:hidden}.bar i{display:block;height:100%;background:#2563eb;border-radius:20px}.feature-list{margin:0;padding-left:18px;color:#65748c;font-size:13px;line-height:2} @media(max-width:900px){.sidebar{width:72px}.brand div:not(.logo),.nav span,.side-note{display:none}.main{padding:20px}.cards{grid-template-columns:repeat(2,1fr)}.grid,.report-grid{grid-template-columns:1fr}} @media(max-width:600px){.cards{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.hero{display:block}.hero-badge{margin-top:18px;display:inline-block}}
+
+/* NEXORA Login and Registration */
+.hidden {
+  display: none !important;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #071426, #102b50, #176b87);
+  font-family: Arial, sans-serif;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  padding: 36px;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.auth-logo {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+  background: #176b87;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.auth-card h1 {
+  margin: 0;
+  text-align: center;
+  color: #102b50;
+  letter-spacing: 3px;
+}
+
+.auth-subtitle {
+  margin: 10px 0 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 5px;
+  border-radius: 9px;
+  background: #eef3f8;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 11px;
+  border: 0;
+  border-radius: 7px;
+  color: #475569;
+  background: transparent;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.auth-tab.active {
+  color: #ffffff;
+  background: #176b87;
+}
+
+.auth-card form label {
+  display: block;
+  margin: 14px 0 7px;
+  color: #24364b;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.auth-card form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d4deea;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+}
+
+.auth-card form input:focus {
+  border-color: #176b87;
+  box-shadow: 0 0 0 3px rgba(23, 107, 135, 0.12);
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #176b87;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.auth-submit:hover {
+  background: #102b50;
+}
+
+#authMessage {
+  margin: 16px 0 0;
+  color: #176b87;
+  text-align: center;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px;
+  }
+}
+
