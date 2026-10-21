@@ -1,386 +1,268 @@
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
-const crypto = require("crypto");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+const DB_FILE = path.join(__dirname, "data", "nexora.db");
 
-// Create database folder
-const DATA_DIR = path.join(__dirname, "data");
-fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const DB_FILE = path.join(DATA_DIR, "nexora.db");
-
-// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Connect to database
-const db = new sqlite3.Database(DB_FILE, (err) => {
-    if (err) {
-        console.error("Database connection failed:", err.message);
-        return;
-    }
+const db = new sqlite3.Database(DB_FILE);
 
-    console.log("NEXORA database connected successfully.");
-});
-
-function ensureColumn(tableName, columnName, columnDefinition) {
-    db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
-        if (err) {
-            console.error(`Failed to inspect ${tableName}:`, err.message);
-            return;
-        }
-
-        const hasColumn = columns && columns.some((column) => column.name === columnName);
-        if (!hasColumn) {
-            db.run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`, (alterErr) => {
-                if (alterErr && !/duplicate column name/i.test(alterErr.message)) {
-                    console.error(`Migration for ${tableName}.${columnName} failed:`, alterErr.message);
-                }
-            });
-        }
+function run(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ id: this.lastID, changes: this.changes });
     });
+  });
 }
 
-// Create tables
-db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT NOT NULL,
-            username TEXT NOT NULL UNIQUE,
-            email TEXT NOT NULL UNIQUE,
-            contact TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+function all(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            name TEXT NOT NULL,
-            description TEXT,
-            status TEXT DEFAULT 'In Progress',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+function get(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            project_id INTEGER,
-            title TEXT NOT NULL,
-            description TEXT,
-            priority TEXT DEFAULT 'Medium',
-            status TEXT DEFAULT 'Pending',
-            due_date TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+async function initDb() {
+  await run(`PRAGMA foreign_keys = ON`);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS snippets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            title TEXT NOT NULL,
-            language TEXT,
-            code TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+  await run(`CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'Active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS bugs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            title TEXT NOT NULL,
-            description TEXT,
-            priority TEXT DEFAULT 'Medium',
-            status TEXT DEFAULT 'Open',
-            assigned_to TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+  await run(`CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT DEFAULT 'Medium',
+    status TEXT DEFAULT 'Pending',
+    due_date TEXT,
+    project_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE SET NULL
+  )`);
 
-    ensureColumn("bugs", "assigned_to", "TEXT");
+  await run(`CREATE TABLE IF NOT EXISTS snippets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    language TEXT NOT NULL,
+    code TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS team (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            name TEXT NOT NULL,
-            email TEXT,
-            role TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-});
+  await run(`CREATE TABLE IF NOT EXISTS bugs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    priority TEXT DEFAULT 'Medium',
+    status TEXT DEFAULT 'Open',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-// Health check
+  await run(`CREATE TABLE IF NOT EXISTS team (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT,
+    role TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  const count = await get(`SELECT COUNT(*) AS count FROM projects`);
+  if (count.count === 0) {
+    const p = await run(
+      `INSERT INTO projects (name, description, status) VALUES (?, ?, ?)`,
+      ["NEXORA Demo Project", "Sample project for testing the platform.", "Active"]
+    );
+    await run(
+      `INSERT INTO tasks (title, description, priority, status, due_date, project_id) VALUES (?, ?, ?, ?, ?, ?)`,
+      ["Set up NEXORA", "Configure the application and database.", "High", "Completed", "", p.id]
+    );
+    await run(
+      `INSERT INTO bugs (title, description, priority, status) VALUES (?, ?, ?, ?)`,
+      ["Sample bug", "Example issue for demonstrating bug tracking.", "Low", "Open"]
+    );
+    await run(
+      `INSERT INTO snippets (title, language, code) VALUES (?, ?, ?)`,
+      ["Hello World", "JavaScript", "console.log('Hello NEXORA!');"]
+    );
+    await run(
+      `INSERT INTO team (name, email, role) VALUES (?, ?, ?)`,
+      ["Project Admin", "admin@nexora.local", "Administrator"]
+    );
+  }
+}
+
 app.get("/api/health", (req, res) => {
+  res.json({ app: "NEXORA", status: "running", database: "SQLite" });
+});
+
+app.get("/api/projects", async (req, res) => {
+  try { res.json(await all("SELECT * FROM projects ORDER BY id DESC")); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/projects", async (req, res) => {
+  try {
+    const { name, description, status = "Active" } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "Project name is required" });
+    const r = await run("INSERT INTO projects (name, description, status) VALUES (?, ?, ?)", [name.trim(), description || "", status]);
+    res.status(201).json(await get("SELECT * FROM projects WHERE id = ?", [r.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put("/api/projects/:id", async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    await run("UPDATE projects SET name=?, description=?, status=? WHERE id=?", [name, description || "", status, req.params.id]);
+    res.json(await get("SELECT * FROM projects WHERE id=?", [req.params.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete("/api/projects/:id", async (req, res) => {
+  try { await run("DELETE FROM projects WHERE id=?", [req.params.id]); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/tasks", async (req, res) => {
+  try { res.json(await all(`SELECT tasks.*, projects.name AS project_name FROM tasks LEFT JOIN projects ON projects.id=tasks.project_id ORDER BY tasks.id DESC`)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/tasks", async (req, res) => {
+  try {
+    const { title, description, priority = "Medium", status = "Pending", due_date = "", project_id = null } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "Task title is required" });
+    const r = await run(`INSERT INTO tasks (title,description,priority,status,due_date,project_id) VALUES (?,?,?,?,?,?)`,
+      [title.trim(), description || "", priority, status, due_date || "", project_id || null]);
+    res.status(201).json(await get("SELECT * FROM tasks WHERE id=?", [r.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put("/api/tasks/:id", async (req, res) => {
+  try {
+    const { title, description, priority, status, due_date, project_id } = req.body;
+    await run(`UPDATE tasks SET title=?,description=?,priority=?,status=?,due_date=?,project_id=? WHERE id=?`,
+      [title, description || "", priority, status, due_date || "", project_id || null, req.params.id]);
+    res.json(await get("SELECT * FROM tasks WHERE id=?", [req.params.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete("/api/tasks/:id", async (req, res) => {
+  try { await run("DELETE FROM tasks WHERE id=?", [req.params.id]); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/snippets", async (req, res) => {
+  try { res.json(await all("SELECT * FROM snippets ORDER BY id DESC")); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/snippets", async (req, res) => {
+  try {
+    const { title, language, code } = req.body;
+    if (!title?.trim() || !language?.trim() || !code?.trim()) return res.status(400).json({ error: "Title, language and code are required" });
+    const r = await run("INSERT INTO snippets (title,language,code) VALUES (?,?,?)", [title.trim(), language.trim(), code]);
+    res.status(201).json(await get("SELECT * FROM snippets WHERE id=?", [r.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put("/api/snippets/:id", async (req, res) => {
+  try {
+    const { title, language, code } = req.body;
+    await run("UPDATE snippets SET title=?,language=?,code=? WHERE id=?", [title, language, code, req.params.id]);
+    res.json(await get("SELECT * FROM snippets WHERE id=?", [req.params.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete("/api/snippets/:id", async (req, res) => {
+  try { await run("DELETE FROM snippets WHERE id=?", [req.params.id]); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/bugs", async (req, res) => {
+  try { res.json(await all("SELECT * FROM bugs ORDER BY id DESC")); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/bugs", async (req, res) => {
+  try {
+    const { title, description, priority = "Medium", status = "Open" } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "Bug title is required" });
+    const r = await run("INSERT INTO bugs (title,description,priority,status) VALUES (?,?,?,?)", [title.trim(), description || "", priority, status]);
+    res.status(201).json(await get("SELECT * FROM bugs WHERE id=?", [r.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put("/api/bugs/:id", async (req, res) => {
+  try {
+    const { title, description, priority, status } = req.body;
+    await run("UPDATE bugs SET title=?,description=?,priority=?,status=? WHERE id=?", [title, description || "", priority, status, req.params.id]);
+    res.json(await get("SELECT * FROM bugs WHERE id=?", [req.params.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete("/api/bugs/:id", async (req, res) => {
+  try { await run("DELETE FROM bugs WHERE id=?", [req.params.id]); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/team", async (req, res) => {
+  try { res.json(await all("SELECT * FROM team ORDER BY id DESC")); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post("/api/team", async (req, res) => {
+  try {
+    const { name, email, role } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "Member name is required" });
+    const r = await run("INSERT INTO team (name,email,role) VALUES (?,?,?)", [name.trim(), email || "", role || "Member"]);
+    res.status(201).json(await get("SELECT * FROM team WHERE id=?", [r.id]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete("/api/team/:id", async (req, res) => {
+  try { await run("DELETE FROM team WHERE id=?", [req.params.id]); res.json({ success: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/overview", async (req, res) => {
+  try {
+    const [projects, tasks, completed, bugs, resolved, members, snippets] = await Promise.all([
+      get("SELECT COUNT(*) count FROM projects"),
+      get("SELECT COUNT(*) count FROM tasks"),
+      get("SELECT COUNT(*) count FROM tasks WHERE status='Completed'"),
+      get("SELECT COUNT(*) count FROM bugs"),
+      get("SELECT COUNT(*) count FROM bugs WHERE status='Resolved'"),
+      get("SELECT COUNT(*) count FROM team"),
+      get("SELECT COUNT(*) count FROM snippets")
+    ]);
     res.json({
-        app: "NEXORA",
-        message: "API is running",
-        database: "SQLite"
+      projects: projects.count,
+      tasks: tasks.count,
+      completedTasks: completed.count,
+      bugs: bugs.count,
+      resolvedBugs: resolved.count,
+      members: members.count,
+      snippets: snippets.count
     });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Overview / dashboard / reports
-app.get("/api/overview", (req, res) => {
-    const queries = {
-        projects: "SELECT COUNT(*) AS total FROM projects",
-        tasks: "SELECT COUNT(*) AS total FROM tasks",
-        completedTasks:
-            "SELECT COUNT(*) AS total FROM tasks WHERE LOWER(TRIM(status)) = 'completed'",
-        bugs: "SELECT COUNT(*) AS total FROM bugs",
-        resolvedBugs:
-            "SELECT COUNT(*) AS total FROM bugs WHERE LOWER(TRIM(status)) = 'resolved'",
-        snippets: "SELECT COUNT(*) AS total FROM snippets",
-        members: "SELECT COUNT(*) AS total FROM team"
-    };
-
-    const overview = {};
-    const keys = Object.keys(queries);
-    let remaining = keys.length;
-    let hasError = false;
-
-    keys.forEach((key) => {
-        db.get(queries[key], [], (err, row) => {
-            if (err) {
-                console.error("Overview query failed:", err.message);
-
-                if (!hasError) {
-                    hasError = true;
-                    res.status(500).json({
-                        error: "Could not load Reports & Analytics."
-                    });
-                }
-                return;
-            }
-
-            overview[key] = row ? row.total : 0;
-            remaining--;
-
-            if (remaining === 0 && !hasError) {
-                res.json(overview);
-            }
-        });
-    });
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Generic CRUD routes
-function registerRoutes(endpoint, table, fields) {
-    app.get(`/api/${endpoint}`, (req, res) => {
-        const query = endpoint === "tasks"
-            ? `SELECT tasks.*, projects.name AS project_name
-               FROM tasks
-               LEFT JOIN projects ON tasks.project_id = projects.id
-               ORDER BY tasks.id DESC`
-            : `SELECT * FROM ${table} ORDER BY id DESC`;
-
-        db.all(query, [], (err, rows) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-
-            res.json(rows);
-        });
-    });
-
-    app.post(`/api/${endpoint}`, (req, res) => {
-        const values = fields.map((field) => req.body[field] ?? null);
-        const columns = fields.join(", ");
-        const placeholders = fields.map(() => "?").join(", ");
-
-        db.run(
-            `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`,
-            values,
-            function (err) {
-                if (err) {
-                    return res.status(400).json({ error: err.message });
-                }
-
-                db.get(
-                    `SELECT * FROM ${table} WHERE id = ?`,
-                    [this.lastID],
-                    (selectErr, row) => {
-                        if (selectErr) {
-                            return res.status(500).json({
-                                error: selectErr.message
-                            });
-                        }
-
-                        res.status(201).json(row);
-                    }
-                );
-            }
-        );
-    });
-
-    app.put(`/api/${endpoint}/:id`, (req, res) => {
-        const values = fields.map((field) => req.body[field] ?? null);
-        const updates = fields.map((field) => `${field} = ?`).join(", ");
-
-        db.run(
-            `UPDATE ${table} SET ${updates} WHERE id = ?`,
-            [...values, req.params.id],
-            function (err) {
-                if (err) {
-                    return res.status(400).json({ error: err.message });
-                }
-
-                res.json({ updated: this.changes });
-            }
-        );
-    });
-
-    app.delete(`/api/${endpoint}/:id`, (req, res) => {
-        db.run(
-            `DELETE FROM ${table} WHERE id = ?`,
-            [req.params.id],
-            function (err) {
-                if (err) {
-                    return res.status(500).json({ error: err.message });
-                }
-
-                res.json({ deleted: this.changes });
-            }
-        );
-    });
-}
-
-// Register module routes
-registerRoutes("projects", "projects", [
-    "user_id", "name", "description", "status"
-]);
-
-registerRoutes("tasks", "tasks", [
-    "user_id", "project_id", "title", "description",
-    "priority", "status", "due_date"
-]);
-
-registerRoutes("snippets", "snippets", [
-    "user_id", "title", "language", "code"
-]);
-
-registerRoutes("bugs", "bugs", [
-    "user_id", "title", "description", "priority", "status", "assigned_to"
-]);
-
-registerRoutes("team", "team", [
-    "user_id", "name", "email", "role"
-]);
-
-// Register user
-app.post("/api/register", (req, res) => {
-    const { full_name, username, email, contact, password } = req.body;
-
-    if (!full_name || !username || !email || !contact || !password) {
-        return res.status(400).json({
-            error: "Please fill in all fields."
-        });
-    }
-
-    if (password.length < 6) {
-        return res.status(400).json({
-            error: "Password must contain at least 6 characters."
-        });
-    }
-
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-    const passwordHash = `${salt}:${hash}`;
-
-    db.run(
-        `INSERT INTO users
-        (full_name, username, email, contact, password_hash)
-        VALUES (?, ?, ?, ?, ?)`,
-        [full_name, username, email, contact, passwordHash],
-        function (err) {
-            if (err) {
-                return res.status(400).json({
-                    error: "Username or email may already be registered."
-                });
-            }
-
-            res.status(201).json({
-                message: "Registration successful.",
-                user: {
-                    id: this.lastID,
-                    full_name,
-                    username,
-                    email,
-                    contact
-                }
-            });
-        }
-    );
-});
-
-// Login
-app.post("/api/login", (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({
-            error: "Enter your username/email and password."
-        });
-    }
-
-    db.get(
-        "SELECT * FROM users WHERE username = ? OR email = ?",
-        [username, username],
-        (err, user) => {
-            if (err || !user) {
-                return res.status(401).json({
-                    error: "Invalid username/email or password."
-                });
-            }
-
-            const parts = user.password_hash.split(":");
-            const salt = parts[0];
-            const savedHash = parts[1];
-
-            const enteredHash = crypto
-                .scryptSync(password, salt, 64)
-                .toString("hex");
-
-            const savedBuffer = Buffer.from(savedHash, "hex");
-            const enteredBuffer = Buffer.from(enteredHash, "hex");
-
-            if (
-                savedBuffer.length !== enteredBuffer.length ||
-                !crypto.timingSafeEqual(savedBuffer, enteredBuffer)
-            ) {
-                return res.status(401).json({
-                    error: "Invalid username/email or password."
-                });
-            }
-
-            res.json({
-                message: "Login successful.",
-                user: {
-                    id: user.id,
-                    full_name: user.full_name,
-                    username: user.username,
-                    email: user.email,
-                    contact: user.contact
-                }
-            });
-        }
-    );
-});
-
-// Start server
-app.listen(PORT, () => {
-    console.log(`NEXORA backend running at http://localhost:${PORT}`);
+initDb().then(() => {
+  app.listen(PORT, () => console.log(`NEXORA is running at http://localhost:${PORT}`));
+}).catch(err => {
+  console.error("Database initialization failed:", err);
+  process.exit(1);
 });

@@ -30,7 +30,6 @@ CREATE TABLE bugs (
   description TEXT,
   priority TEXT DEFAULT 'Medium',
   status TEXT DEFAULT 'Open',
-  assigned_to TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE team (
