@@ -2,17 +2,35 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
-const PORT = 3000;
-const DB_FILE = path.join(__dirname, "data", "nexora.db");
+
+const PORT = process.env.PORT || 3000;
+
+// Create the database folder if it doesn't exist
+const DATA_DIR = path.join(__dirname, "data");
+
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Set the SQLite database path
+const DB_FILE = path.join(DATA_DIR, "nexora.db");
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const db = new sqlite3.Database(DB_FILE);
+// Connect to the database
+const db = new sqlite3.Database(DB_FILE, (err) => {
+    if (err) {
+        console.error("Database connection failed:", err.message);
+    } else {
+        console.log("NEXORA database connected successfully.");
+    }
+});
 
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
