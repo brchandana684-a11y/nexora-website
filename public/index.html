@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXORA | Software Development Management Platform</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand"><div class="logo">N</div><div><b>NEXORA</b><span>Development Platform</span></div></div>
+    <h1 id="authTitle">Welcome back</h1>
+    <p id="authSubtitle">Log in to continue to your workspace.</p>
+    <div id="authMessage" class="auth-message hidden" role="alert"></div>
+    <form id="loginForm" onsubmit="loginUser(event)">
+      <label for="loginUsername">Username</label><input id="loginUsername" autocomplete="username" required>
+      <label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required>
+      <button class="btn auth-submit" type="submit">Log In</button>
+    </form>
+    <form id="registerForm" class="hidden" onsubmit="registerUser(event)">
+      <label for="regName">Full name</label><input id="regName" autocomplete="name" required>
+      <label for="regUsername">Username</label><input id="regUsername" autocomplete="username" minlength="3" required>
+      <label for="regContact">Contact number</label><input id="regContact" type="tel" autocomplete="tel" required>
+      <label for="regPassword">Password (at least 6 characters)</label><input id="regPassword" type="password" autocomplete="new-password" minlength="6" required>
+      <button class="btn auth-submit" type="submit">Create Account</button>
+    </form>
+    <p class="auth-switch"><span id="authSwitchText">New to NEXORA?</span> <button type="button" id="authSwitch" onclick="toggleAuthMode()">Register</button></p>
+  </div>
+</section>
+<div class="app hidden" id="mainApp">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">N</div><div><b>NEXORA</b><span>Development Platform</span></div></div>
+    <nav>
+      <button class="nav active" data-page="dashboard">⌂ <span>Dashboard</span></button>
+      <button class="nav" data-page="projects">▣ <span>Project Management</span></button>
+      <button class="nav" data-page="tasks">✓ <span>Task Management</span></button>
+      <button class="nav" data-page="snippets">{ } <span>Code Snippet Manager</span></button>
+      <button class="nav" data-page="bugs">⚠ <span>Bug Tracking</span></button>
+      <button class="nav" data-page="team">♙ <span>Team Collaboration</span></button>
+      <button class="nav" data-page="reports">▥ <span>Reports & Analytics</span></button>
+    </nav>
+    <div class="side-note">Unified workspace for modern software teams.</div>
+  </aside>
+
+  <main class="main">
+    <header><div><div class="eyebrow">SOFTWARE DEVELOPMENT MANAGEMENT</div><h1 id="pageTitle">Dashboard</h1></div><div class="header-actions"><div class="status"><i></i> System online</div><button class="btn logout-btn" onclick="logoutUser()">Log Out</button></div></header>
+    <section id="content"></section>
+  </main>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-card"><button class="close" onclick="closeModal()">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
+<script src="script.js"></script>
+</body>
+</html>
